@@ -20,12 +20,12 @@ var sessions = make(map[string]*Session)
 var mu sync.Mutex
 
 type Session struct {
-	Name        string
-	Stage       string
-	PIN         string
-	Balance     float64
-	PendingName string
-	PendingAmt  float64
+	Name         string
+	Stage        string
+	PIN          string
+	Balance      float64
+	PendingName  string
+	PendingAmt   float64
 	Transactions []string
 }
 
@@ -117,7 +117,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			if s.Balance >= s.PendingAmt {
 				s.Balance -= s.PendingAmt
 				tx := fmt.Sprintf("Sent $%.2f to %s ✅", s.PendingAmt, s.PendingName)
-				s.Transactions = append([]string{tx}, s.Transactions...) // prepend
+				s.Transactions = append([]string{tx}, s.Transactions...)
 				response = fmt.Sprintf("✅ Transaction successful!\nNew balance: $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit", s.Balance)
 			} else {
 				response = "⚠️ Insufficient funds."
@@ -154,7 +154,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			response = "👩🏾‍💼 Connecting to an agent..."
 		default:
 			response = "❓ Please choose 1, 2, or 3."
-			return respondXML(w, response)
+			respondXML(w, response) // call first
+			return
 		}
 		response += "\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit"
 		s.Stage = "post_action"
