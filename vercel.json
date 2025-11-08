@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/whatsapp.go": {
-      "runtime": "go1.x"
-    }
-  }
-}
