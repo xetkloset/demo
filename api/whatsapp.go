@@ -24,6 +24,226 @@ var loans = make(map[string]*Loan)
 var loanMu sync.Mutex
 var loanCounter int
 
+// Translations map: language -> key -> translated text
+var translations = map[string]map[string]string{
+	"en": { // English
+		"welcome":               "👋 Welcome! Please enter your 4-digit PIN to continue.",
+		"pin_accepted":          "✅ PIN accepted! Please enter your name to continue.",
+		"pin_invalid":           "❌ Invalid PIN. Please enter a 4-digit PIN.",
+		"good_day":              "Good day, %s 👋\n\nWhat would you like to do today?",
+		"menu_tip":              "\n\nTip: After entering Loan Menu you can switch roles and regions for demo.",
+		"menu_1_balance":        "1️⃣ Check Balance",
+		"menu_2_send":           "2️⃣ Send Money",
+		"menu_3_airtime":        "3️⃣ Buy Airtime",
+		"menu_4_bills":          "4️⃣ Pay Bills",
+		"menu_5_transactions":   "5️⃣ View Transactions",
+		"menu_6_support":        "6️⃣ Talk to Support",
+		"menu_7_loan":           "7️⃣ Microfin Loan 💸",
+		"menu_8_language":       "8️⃣ Change Language 🌍",
+		"your_balance":          "💰 Your current balance is $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"send_to_who":           "Who would you like to send money to?",
+		"send_how_much":         "How much would you like to send to %s?",
+		"invalid_amount":        "❌ Invalid amount. Try again (e.g., 20 or $20).",
+		"confirm_send":          "Send $%.2f to %s? ✅ Yes / ❌ No",
+		"transaction_success":   "✅ Transaction successful!\nNew balance: $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"insufficient_funds":    "⚠️ Insufficient funds.",
+		"transaction_cancelled": "❌ Transaction cancelled.\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"sent_to":               "Sent $%.2f to %s ✅",
+		"airtime_prompt":        "Enter amount and mobile number (e.g. $2 to 0772123456)",
+		"airtime_invalid":       "❌ Invalid format. Try again (e.g., $2 to 0772123456).",
+		"airtime_success":       "✅ Airtime purchase successful! New balance: $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"bought_airtime":        "Bought $%.2f airtime 📱",
+		"not_enough_balance":    "⚠️ Not enough balance.",
+		"bills_demo":            "⚙️ Bill payment demo not active.\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"recent_transactions":   "🧾 Recent Transactions:\n%s\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"no_transactions":       "No transactions yet",
+		"support_menu":          "I can help you with:\n1️⃣ Lost Card\n2️⃣ Transaction Issue\n3️⃣ Talk to Agent",
+		"support_lost_card":     "🧾 Lost Card: Please call 0800 123 456.",
+		"support_issue_logged":  "⚙️ Transaction Issue logged.",
+		"support_agent":         "👩🏾‍💼 Connecting to an agent...",
+		"choose_valid_support":  "❓ Please choose 1, 2, or 3.",
+		"post_action_menu":      "Please choose:\n1️⃣ Main Menu\n0️⃣ Exit",
+		"goodbye":               "👋 Thank you for using WalletBot! Goodbye!",
+		"choose_valid_option":   "❓ Please choose a valid option (1–8).",
+		"loan_menu_title":       "🏦 Microfin Loan Menu — Role: %s | Region: %s\n\n",
+		"loan_menu_1":           "1️⃣ Request Loan",
+		"loan_menu_2":           "2️⃣ View Loan Status",
+		"loan_menu_3":           "3️⃣ Recommend Borrower",
+		"loan_menu_4":           "4️⃣ Switch Role",
+		"loan_menu_5":           "5️⃣ Borrow Funds",
+		"loan_menu_6":           "6️⃣ Approve Loans",
+		"loan_menu_0":           "0️⃣ Back to Main Menu",
+		"loan_menu_note":        "\n\n(Use numeric choices)",
+		"loan_request_name":     "Loan Request — Enter applicant *name*:",
+		"loan_request_id":       "Enter applicant ID:",
+		"loan_request_region":   "Select applicant region:\n1️⃣ Tabhera\n2️⃣ Nyika",
+		"loan_request_amount":   "Enter requested loan amount (e.g., 300):",
+		"loan_submitted":        "✅ Loan request submitted with ID: %s\nStatus: pending (awaiting Mufundisi approval)\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit",
+		"choose_region":         "Please choose 1 for Tabhera or 2 for Nyika.",
+		"recommend_title":       "📋 Borrowers awaiting recommendation:\n\n",
+		"recommend_none":        "✅ No borrowers awaiting recommendation in your region.",
+		"recommend_footer":      "\nReply with a number (1–%d) or 0️⃣ to go back.",
+		"recommend_invalid":     "❌ Invalid choice. Please reply with a valid number.",
+		"recommend_not_found":   "Loan not found.",
+		"recommend_question":    "Would you like to recommend %s?\n1️⃣ Yes\n2️⃣ No",
+		"recommend_yes_no":      "Please reply with 1️⃣ Yes or 2️⃣ No.",
+		"recommend_success":     "✅ Recommendation recorded for %s.",
+		"recommend_already":     "✅ You already recommended this borrower.",
+		"recommend_reason":      "Please provide a reason for not recommending:",
+		"not_recommended":       "❌ Not recommended (%s).",
+		"approver_switch":       "To approve loans switch to role Mufundisi or Elder first. Use Switch Role (option 4).",
+		"role_switched":         "🔁 Role switched to %s. Region: %s\n\nGo to Main Menu -> 7 for Microfin Loan.",
+		"role_unknown":          "Unknown role. Valid: member, mufundisi, elder, recommender.",
+		"switch_role_menu":      "Select your role:\n1️⃣ Member / Requester\n2️⃣ Mufundisi (Approver)\n3️⃣ Elder (Approver)\n4️⃣ Back",
+		"language_menu":         "🌍 Choose your language / Sarudza mutauro / Khetha ulimi lwakho:\n\n1️⃣ English\n2️⃣ Shona\n3️⃣ Ndebele\n0️⃣ Back",
+		"language_changed":      "✅ Language changed to %s",
+	},
+	"sn": { // Shona
+		"welcome":               "👋 Mauya! Ndapota isa PIN yako ine manhamba mana.",
+		"pin_accepted":          "✅ PIN yakagamuchirwa! Ndapota isa zita rako.",
+		"pin_invalid":           "❌ PIN isiri yechokwadi. Ndapota isa PIN ine manhamba mana.",
+		"good_day":              "Mhoro, %s 👋\n\nUngada kuita chii nhasi?",
+		"menu_tip":              "\n\nChiziviso: Mushure mekupinda muMenu yeChikwereti unogona kushandura mabasa nematunhu.",
+		"menu_1_balance":        "1️⃣ Tarisa Mari Yangu",
+		"menu_2_send":           "2️⃣ Tumira Mari",
+		"menu_3_airtime":        "3️⃣ Tenga Airtime",
+		"menu_4_bills":          "4️⃣ Bhadhara Mabhiri",
+		"menu_5_transactions":   "5️⃣ Ona Zvakaitika",
+		"menu_6_support":        "6️⃣ Taura neRubatsiro",
+		"menu_7_loan":           "7️⃣ Chikwereti cheMicrofin 💸",
+		"menu_8_language":       "8️⃣ Shandura Mutauro 🌍",
+		"your_balance":          "💰 Mari yako yakasvika $%.2f\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"send_to_who":           "Ungade kutumira mari kuna ani?",
+		"send_how_much":         "Ungade kutumira mari yakawanda sei kuna %s?",
+		"invalid_amount":        "❌ Mari isiri yechokwadi. Edza zvakare (somuenzaniso, 20 kana $20).",
+		"confirm_send":          "Tumira $%.2f kuna %s? ✅ Hongu / ❌ Kwete",
+		"transaction_success":   "✅ Kutumira kwakafambira mberi!\nMari yatsva: $%.2f\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"insufficient_funds":    "⚠️ Mari haina kukwana.",
+		"transaction_cancelled": "❌ Kutumira kwakamiswa.\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"sent_to":               "Kutumira $%.2f kuna %s ✅",
+		"airtime_prompt":        "Isa mari nenhamba (somuenzaniso $2 ku 0772123456)",
+		"airtime_invalid":       "❌ Chisiri chechokwadi. Edza zvakare (somuenzaniso, $2 ku 0772123456).",
+		"airtime_success":       "✅ Kutenga airtime kwakafambira mberi! Mari yatsva: $%.2f\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"bought_airtime":        "Kutenga $%.2f airtime 📱",
+		"not_enough_balance":    "⚠️ Mari haina kukwana.",
+		"bills_demo":            "⚙️ Kubhadhara mabhiri hakusati kwatanga kushanda.\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"recent_transactions":   "🧾 Zvakaita Zvekupedzisira:\n%s\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"no_transactions":       "Hapana zvakaita parizvino",
+		"support_menu":          "Ndinogona kukubatsira ne:\n1️⃣ Kadhi Rakarasika\n2️⃣ Dambudziko Rekutumira\n3️⃣ Taura neMumiriri",
+		"support_lost_card":     "🧾 Kadhi Rakarasika: Ndapota fona 0800 123 456.",
+		"support_issue_logged":  "⚙️ Dambudziko ranyorwa.",
+		"support_agent":         "👩🏾‍💼 Tiri kukubatanidza nemumiriri...",
+		"choose_valid_support":  "❓ Ndapota sarudza 1, 2, kana 3.",
+		"post_action_menu":      "Ndapota sarudza:\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"goodbye":               "👋 Tinotenda kushandisa WalletBot! Sara zvakanaka!",
+		"choose_valid_option":   "❓ Ndapota sarudza sarudzo chaiyo (1–8).",
+		"loan_menu_title":       "🏦 Menu yeChikwereti cheMicrofin — Basa: %s | Dunhu: %s\n\n",
+		"loan_menu_1":           "1️⃣ Kumbira Chikwereti",
+		"loan_menu_2":           "2️⃣ Ona Chikwereti Changu",
+		"loan_menu_3":           "3️⃣ Kurudzira Mukwereti",
+		"loan_menu_4":           "4️⃣ Shandura Basa",
+		"loan_menu_5":           "5️⃣ Tora Mari Yakabvumidzwa",
+		"loan_menu_6":           "6️⃣ Bvumidza Zvikwereti",
+		"loan_menu_0":           "0️⃣ Dzokera kuMenu Huru",
+		"loan_menu_note":        "\n\n(Shandisa nhamba)",
+		"loan_request_name":     "Chikwereti — Isa *zita* remunyoreri:",
+		"loan_request_id":       "Isa ID yemunyoreri:",
+		"loan_request_region":   "Sarudza dunhu remunyoreri:\n1️⃣ Tabhera\n2️⃣ Nyika",
+		"loan_request_amount":   "Isa mari yechikwereti (somuenzaniso, 300):",
+		"loan_submitted":        "✅ Chikwereti chaendeswa neID: %s\nChimiro: Chakamirira kubvumidzwa naMufundisi\n\nUngade kuita chimwe chinhu here?\n1️⃣ Menu Huru\n0️⃣ Buda",
+		"choose_region":         "Ndapota sarudza 1 yeTabhera kana 2 yeNyika.",
+		"recommend_title":       "📋 Vanhu vari kumirira kurudzirwa:\n\n",
+		"recommend_none":        "✅ Hapana munhu arikumirira kurudzirwa mudunhu rako.",
+		"recommend_footer":      "\nPindura nenhamba (1–%d) kana 0️⃣ kudzokera.",
+		"recommend_invalid":     "❌ Sarudzo isiri yechokwadi. Ndapota sarudza nhamba chaiyo.",
+		"recommend_not_found":   "Chikwereti hachina kuwanikwa.",
+		"recommend_question":    "Ungade kurudzira %s here?\n1️⃣ Hongu\n2️⃣ Kwete",
+		"recommend_yes_no":      "Ndapota pindura 1️⃣ Hongu kana 2️⃣ Kwete.",
+		"recommend_success":     "✅ Kurudziro kwakanyorwa kuna %s.",
+		"recommend_already":     "✅ Watozvikurudzira munhu uyu.",
+		"recommend_reason":      "Ndapota ipa chikonzero chekusarudzira:",
+		"not_recommended":       "❌ Haina kurudzirwa (%s).",
+		"approver_switch":       "Kuti ubvumidze zvikwereti shandura basa kuMufundisi kana Mukuru. Shandisa Shandura Basa (sarudzo 4).",
+		"role_switched":         "🔁 Basa rakashandurwa kuita %s. Dunhu: %s\n\nEnda kuMenu Huru -> 7 yeChikwereti.",
+		"role_unknown":          "Basa risingazivikanwe. Mabasa: member, mufundisi, elder, recommender.",
+		"switch_role_menu":      "Sarudza basa rako:\n1️⃣ Nhengo / Munyoreri\n2️⃣ Mufundisi (Mubvumidzi)\n3️⃣ Mukuru (Mubvumidzi)\n4️⃣ Dzoka",
+		"language_menu":         "🌍 Choose your language / Sarudza mutauro / Khetha ulimi lwakho:\n\n1️⃣ English\n2️⃣ Shona\n3️⃣ Ndebele\n0️⃣ Back / Dzoka / Buyela",
+		"language_changed":      "✅ Mutauro wakashandurwa kuita %s",
+	},
+	"nd": { // Ndebele
+		"welcome":               "👋 Siyekelele! Sicela ufake i-PIN yakho enezinombolo ezine.",
+		"pin_accepted":          "✅ I-PIN yamukelwe! Sicela ufake igama lakho.",
+		"pin_invalid":           "❌ I-PIN engalungile. Sicela ufake i-PIN enezinombolo ezine.",
+		"good_day":              "Livukile, %s 👋\n\nUfunani ukwenza namhlanje?",
+		"menu_tip":              "\n\nIcebo: Ngemva kokungena ku-Menu Yezemalimboleko ungashintsha imihlomba lezifunda.",
+		"menu_1_balance":        "1️⃣ Bona Imali Yami",
+		"menu_2_send":           "2️⃣ Thumela Imali",
+		"menu_3_airtime":        "3️⃣ Thenga I-airtime",
+		"menu_4_bills":          "4️⃣ Bhadala Izikweletu",
+		"menu_5_transactions":   "5️⃣ Bona Okwenzakeleyo",
+		"menu_6_support":        "6️⃣ Khuluma Ngosizo",
+		"menu_7_loan":           "7️⃣ Imalimboleko Ye-Microfin 💸",
+		"menu_8_language":       "8️⃣ Shintsha Ulimi 🌍",
+		"your_balance":          "💰 Imali yakho ifinyelela ku-$%.2f\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"send_to_who":           "Ufuna ukuthumela imali kubani?",
+		"send_how_much":         "Ufuna ukuthumela imali engakanani ku-%s?",
+		"invalid_amount":        "❌ Imali engalungile. Zama futhi (isibonelo, 20 kumbe $20).",
+		"confirm_send":          "Thumela $%.2f ku-%s? ✅ Yebo / ❌ Hatshi",
+		"transaction_success":   "✅ Ukuthumela kuphumelele!\nImali entsha: $%.2f\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"insufficient_funds":    "⚠️ Imali ayeneli.",
+		"transaction_cancelled": "❌ Ukuthumela kuvalwe.\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"sent_to":               "Ukuthumela $%.2f ku-%s ✅",
+		"airtime_prompt":        "Faka imali lenombolo (isibonelo $2 ku-0772123456)",
+		"airtime_invalid":       "❌ Akusilo esilungile. Zama futhi (isibonelo, $2 ku-0772123456).",
+		"airtime_success":       "✅ Ukuthenga i-airtime kuphumelele! Imali entsha: $%.2f\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"bought_airtime":        "Ukuthenga $%.2f airtime 📱",
+		"not_enough_balance":    "⚠️ Imali ayeneli.",
+		"bills_demo":            "⚙️ Ukubhadala izikweletu akusasebenzi okwamanje.\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"recent_transactions":   "🧾 Okwenzakeleyo Kamuva:\n%s\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"no_transactions":       "Akulalutho olwenzakeleyo okwamanje",
+		"support_menu":          "Ngingakusiza nge:\n1️⃣ Ikhadi Elilahlekileko\n2️⃣ Inkinga Yokuthumela\n3️⃣ Khuluma Lo-agent",
+		"support_lost_card":     "🧾 Ikhadi Elilahlekileko: Sicela ubize 0800 123 456.",
+		"support_issue_logged":  "⚙️ Inkinga ibhaliwe.",
+		"support_agent":         "👩🏾‍💼 Siyakuxhuma lo-agent...",
+		"choose_valid_support":  "❓ Sicela ukhethe 1, 2, kumbe 3.",
+		"post_action_menu":      "Sicela ukhethe:\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"goodbye":               "👋 Siyabonga ukusebenzisa i-WalletBot! Sala kuhle!",
+		"choose_valid_option":   "❓ Sicela ukhethe okufaneleyo (1–8).",
+		"loan_menu_title":       "🏦 I-Menu Yemalimboleko Ye-Microfin — Umhlomba: %s | Isifunda: %s\n\n",
+		"loan_menu_1":           "1️⃣ Cela Imalimboleko",
+		"loan_menu_2":           "2️⃣ Bona Imalimboleko Yami",
+		"loan_menu_3":           "3️⃣ Ncoma Umboleki",
+		"loan_menu_4":           "4️⃣ Shintsha Umhlomba",
+		"loan_menu_5":           "5️⃣ Thatha Imali Evunyiweyo",
+		"loan_menu_6":           "6️⃣ Vumela Amalimboleko",
+		"loan_menu_0":           "0️⃣ Buyela ku-Menu Enkulu",
+		"loan_menu_note":        "\n\n(Sebenzisa izinombolo)",
+		"loan_request_name":     "Imalimboleko — Faka *igama* lomceli:",
+		"loan_request_id":       "Faka i-ID yomceli:",
+		"loan_request_region":   "Khetha isifunda somceli:\n1️⃣ Tabhera\n2️⃣ Nyika",
+		"loan_request_amount":   "Faka imali yemalimboleko (isibonelo, 300):",
+		"loan_submitted":        "✅ Imalimboleko ithunyelwe nge-ID: %s\nIsimo: Ilindele ukuvunywa ngu-Mufundisi\n\nUfuna ukwenza okunye na?\n1️⃣ I-Menu Enkulu\n0️⃣ Phuma",
+		"choose_region":         "Sicela ukhethe 1 ye-Tabhera kumbe 2 ye-Nyika.",
+		"recommend_title":       "📋 Abantu abalindele ukuncomwa:\n\n",
+		"recommend_none":        "✅ Akukho muntu olindele ukuncomwa esifundeni sakho.",
+		"recommend_footer":      "\nPhendula ngenombolo (1–%d) kumbe 0️⃣ ukubuyela.",
+		"recommend_invalid":     "❌ Ukukhetha okungalungile. Sicela ukhethe inombolo efaneleyo.",
+		"recommend_not_found":   "Imalimboleko ayitholwa.",
+		"recommend_question":    "Ufuna ukuncoma %s na?\n1️⃣ Yebo\n2️⃣ Hatshi",
+		"recommend_yes_no":      "Sicela uphendule 1️⃣ Yebo kumbe 2️⃣ Hatshi.",
+		"recommend_success":     "✅ Ukuncoma kubhaliwe ku-%s.",
+		"recommend_already":     "✅ Usumthembisile umuntu lo.",
+		"recommend_reason":      "Sicela unikele isizatho sokungancomi:",
+		"not_recommended":       "❌ Akanconywanga (%s).",
+		"approver_switch":       "Ukuze uvumele amalimboleko shintsha umhlomba ku-Mufundisi kumbe ku-Elder. Sebenzisa Shintsha Umhlomba (ukukhetha 4).",
+		"role_switched":         "🔁 Umhlomba ushintshiwe waba ngu-%s. Isifunda: %s\n\nYiya ku-Menu Enkulu -> 7 Yemalimboleko.",
+		"role_unknown":          "Umhlomba ongaziwa. Imihlomba: member, mufundisi, elder, recommender.",
+		"switch_role_menu":      "Khetha umhlomba wakho:\n1️⃣ Ilungu / Umceli\n2️⃣ Mufundisi (Umvumeli)\n3️⃣ Elder (Umvumeli)\n4️⃣ Buyela",
+		"language_menu":         "🌍 Choose your language / Sarudza mutauro / Khetha ulimi lwakho:\n\n1️⃣ English\n2️⃣ Shona\n3️⃣ Ndebele\n0️⃣ Back / Dzoka / Buyela",
+		"language_changed":      "✅ Ulimi lushintshiwe lwaba ngu-%s",
+	},
+}
+
 // Session represents a user session (single shared session per WhatsApp number)
 type Session struct {
 	Name             string
@@ -36,6 +256,7 @@ type Session struct {
 	Role             string // "member", "mufundisi", "elder", "recommender" (we treat recommender as member with flag)
 	Region           string // "Tabhera" or "Nyika"
 	TempLoanList     map[string]string `json:"-"` // Maps numbers to loan IDs for recommendation selection
+	Language         string            // "en" (English), "sn" (Shona), "nd" (Ndebele)
 }
 
 // Loan model
@@ -75,6 +296,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			Transactions: []string{},
 			Role:         "member",
 			Region:       "Tabhera",
+			Language:     "en",
 		}
 		sessions[from] = s
 	}
@@ -88,11 +310,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		switch role {
 		case "member", "mufundisi", "elder", "recommender":
 			s.Role = role
-			response = fmt.Sprintf("🔁 Role switched to %s. Region: %s\n\nGo to Main Menu -> 7 for Microfin Loan.", strings.Title(role), s.Region)
+			response = getTextf(s.Language, "role_switched", strings.Title(role), s.Region)
 			respondXML(w, response)
 			return
 		default:
-			response = "Unknown role. Valid: member, mufundisi, elder, recommender."
+			response = getText(s.Language, "role_unknown")
 			respondXML(w, response)
 			return
 		}
@@ -101,126 +323,154 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	switch s.Stage {
 
 	case "ask_pin":
-		response = "👋 Welcome! Please enter your 4-digit PIN to continue."
+		response = getText(s.Language, "welcome")
 		s.Stage = "verify_pin"
 
 	case "verify_pin":
 		if len(body) == 4 && isNumeric(body) {
 			s.PIN = body
 			s.Stage = "ask_name"
-			response = "✅ PIN accepted! Please enter your name to continue."
+			response = getText(s.Language, "pin_accepted")
 		} else {
-			response = "❌ Invalid PIN. Please enter a 4-digit PIN."
+			response = getText(s.Language, "pin_invalid")
 		}
 
 	case "ask_name":
 		s.Name = strings.Title(body)
 		s.Stage = "main_menu"
-		response = mainMenuText(s.Name)
+		response = mainMenuText(s)
 
 	case "main_menu":
 		switch body {
 		case "1":
-			response = fmt.Sprintf("💰 Your current balance is $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit", s.Balance)
+			response = getTextf(s.Language, "your_balance", s.Balance)
 			s.Stage = "post_action"
 		case "2":
 			s.Stage = "send_to"
-			response = "Who would you like to send money to?"
+			response = getText(s.Language, "send_to_who")
 		case "3":
 			s.Stage = "airtime"
-			response = "Enter amount and mobile number (e.g. $2 to 0772123456)"
+			response = getText(s.Language, "airtime_prompt")
 		case "4":
-			response = "⚙️ Bill payment demo not active.\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit"
+			response = getText(s.Language, "bills_demo")
 			s.Stage = "post_action"
 		case "5":
-			txs := "No transactions yet"
+			txs := getText(s.Language, "no_transactions")
 			if len(s.Transactions) > 0 {
 				txs = strings.Join(s.Transactions, "\n")
 			}
-			response = fmt.Sprintf("🧾 Recent Transactions:\n%s\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit", txs)
+			response = getTextf(s.Language, "recent_transactions", txs)
 			s.Stage = "post_action"
 		case "6":
 			s.Stage = "support"
-			response = "I can help you with:\n1️⃣ Lost Card\n2️⃣ Transaction Issue\n3️⃣ Talk to Agent"
+			response = getText(s.Language, "support_menu")
 		case "7":
 			s.Stage = "loan_menu"
 			response = loanMenuText(s)
+		case "8":
+			s.Stage = "language_menu"
+			response = getText(s.Language, "language_menu")
 		default:
-			response = "❓ Please choose a valid option (1–7)."
+			response = getText(s.Language, "choose_valid_option")
 		}
 
 	case "send_to":
 		s.PendingName = strings.Title(body)
 		s.Stage = "send_amount"
-		response = fmt.Sprintf("How much would you like to send to %s?", s.PendingName)
+		response = getTextf(s.Language, "send_how_much", s.PendingName)
 
 	case "send_amount":
 		amt, err := parseAmount(body)
 		if err != nil {
-			response = "❌ Invalid amount. Try again (e.g., 20 or $20)."
+			response = getText(s.Language, "invalid_amount")
 			break
 		}
 		s.PendingAmt = amt
 		s.Stage = "confirm_send"
-		response = fmt.Sprintf("Send $%.2f to %s? ✅ Yes / ❌ No", s.PendingAmt, s.PendingName)
+		response = getTextf(s.Language, "confirm_send", s.PendingAmt, s.PendingName)
 
 	case "confirm_send":
 		if strings.Contains(body, "yes") || body == "✅" {
 			if s.Balance >= s.PendingAmt {
 				s.Balance -= s.PendingAmt
-				tx := fmt.Sprintf("Sent $%.2f to %s ✅", s.PendingAmt, s.PendingName)
+				tx := getTextf(s.Language, "sent_to", s.PendingAmt, s.PendingName)
 				s.Transactions = append([]string{tx}, s.Transactions...)
-				response = fmt.Sprintf("✅ Transaction successful!\nNew balance: $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit", s.Balance)
+				response = getTextf(s.Language, "transaction_success", s.Balance)
 			} else {
-				response = "⚠️ Insufficient funds."
+				response = getText(s.Language, "insufficient_funds")
 			}
 			s.Stage = "post_action"
 		} else {
-			response = "❌ Transaction cancelled.\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit"
+			response = getText(s.Language, "transaction_cancelled")
 			s.Stage = "post_action"
 		}
 
 	case "airtime":
 		amt, err := parseAmount(body)
 		if err != nil {
-			response = "❌ Invalid format. Try again (e.g., $2 to 0772123456)."
+			response = getText(s.Language, "airtime_invalid")
 			break
 		}
 		if s.Balance >= amt {
 			s.Balance -= amt
-			tx := fmt.Sprintf("Bought $%.2f airtime 📱", amt)
+			tx := getTextf(s.Language, "bought_airtime", amt)
 			s.Transactions = append([]string{tx}, s.Transactions...)
-			response = fmt.Sprintf("✅ Airtime purchase successful! New balance: $%.2f\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit", s.Balance)
+			response = getTextf(s.Language, "airtime_success", s.Balance)
 		} else {
-			response = "⚠️ Not enough balance."
+			response = getText(s.Language, "not_enough_balance")
 		}
 		s.Stage = "post_action"
 
 	case "support":
 		switch body {
 		case "1":
-			response = "🧾 Lost Card: Please call 0800 123 456."
+			response = getText(s.Language, "support_lost_card")
 		case "2":
-			response = "⚙️ Transaction Issue logged."
+			response = getText(s.Language, "support_issue_logged")
 		case "3":
-			response = "👩🏾‍💼 Connecting to an agent..."
+			response = getText(s.Language, "support_agent")
 		default:
-			response = "❓ Please choose 1, 2, or 3."
+			response = getText(s.Language, "choose_valid_support")
 			respondXML(w, response)
 			return
 		}
-		response += "\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit"
+		response += "\n\n" + getText(s.Language, "post_action_menu")
 		s.Stage = "post_action"
 
 	case "post_action":
 		if body == "1" {
 			s.Stage = "main_menu"
-			response = mainMenuText(s.Name)
+			response = mainMenuText(s)
 		} else if body == "0" || strings.Contains(body, "no") {
 			delete(sessions, from)
-			response = "👋 Thank you for using WalletBot! Goodbye!"
+			response = getText(s.Language, "goodbye")
 		} else {
-			response = "Please choose:\n1️⃣ Main Menu\n0️⃣ Exit"
+			response = getText(s.Language, "post_action_menu")
+		}
+
+	// ---------- LANGUAGE MENU ----------
+	case "language_menu":
+		switch body {
+		case "1":
+			s.Language = "en"
+			response = getTextf(s.Language, "language_changed", "English")
+			s.Stage = "main_menu"
+			response += "\n\n" + mainMenuText(s)
+		case "2":
+			s.Language = "sn"
+			response = getTextf(s.Language, "language_changed", "Shona")
+			s.Stage = "main_menu"
+			response += "\n\n" + mainMenuText(s)
+		case "3":
+			s.Language = "nd"
+			response = getTextf(s.Language, "language_changed", "Ndebele")
+			s.Stage = "main_menu"
+			response += "\n\n" + mainMenuText(s)
+		case "0":
+			s.Stage = "main_menu"
+			response = mainMenuText(s)
+		default:
+			response = getText(s.Language, "language_menu")
 		}
 
 	// ---------- LOAN MENU ----------
@@ -228,7 +478,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		switch strings.TrimSpace(body) {
 		case "1": // Request Loan
 			s.Stage = "loan_request_name"
-			response = "Loan Request — Enter applicant *name*:"
+			response = getText(s.Language, "loan_request_name")
 		case "2": // View Loan Status
 			response = viewLoansForApplicant(s.Name)
 		case "3": // Recommend Borrower
@@ -237,20 +487,20 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			response = recommendListPrompt(s)
 		case "4": // Switch Role
 			s.Stage = "switch_role_menu"
-			response = switchRoleMenuText()
+			response = switchRoleMenuText(s)
 		case "5": // Borrow Funds
 			s.Stage = "borrow_list"
 			response = borrowListPrompt(s)
 		case "6": // Approve Loans (for approvers)
 			if s.Role != "mufundisi" && s.Role != "elder" {
-				response = "To approve loans switch to role Mufundisi or Elder first. Use Switch Role (option 4)."
+				response = getText(s.Language, "approver_switch")
 			} else {
 				s.Stage = "approver_list"
 				response = approverListPrompt(s)
 			}
 		case "0":
 			s.Stage = "main_menu"
-			response = mainMenuText(s.Name)
+			response = mainMenuText(s)
 		default:
 			response = loanMenuText(s)
 		}
@@ -259,12 +509,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	case "loan_request_name":
 		s.PendingName = strings.Title(body)
 		s.Stage = "loan_request_id"
-		response = "Enter applicant ID:"
+		response = getText(s.Language, "loan_request_id")
 
 	case "loan_request_id":
 		s.PIN = strings.ToUpper(strings.TrimSpace(body)) // temporarily store applicant ID in PIN
 		s.Stage = "loan_request_region_choice"
-		response = "Select applicant region:\n1️⃣ Tabhera\n2️⃣ Nyika"
+		response = getText(s.Language, "loan_request_region")
 
 	case "loan_request_region_choice":
 		if body == "1" {
@@ -272,21 +522,21 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		} else if body == "2" {
 			s.Region = "Nyika"
 		} else {
-			response = "Please choose 1 for Tabhera or 2 for Nyika."
+			response = getText(s.Language, "choose_region")
 			respondXML(w, response)
 			return
 		}
 		s.Stage = "loan_request_amount"
-		response = "Enter requested loan amount (e.g., 300):"
+		response = getText(s.Language, "loan_request_amount")
 
 	case "loan_request_amount":
 		amt, err := parseAmount(body)
 		if err != nil {
-			response = "❌ Invalid amount. Try again (e.g., 300 or $300)."
+			response = getText(s.Language, "invalid_amount")
 			break
 		}
 		loan := createLoan(s.PendingName, s.PIN, s.Region, amt, s.Name)
-		response = fmt.Sprintf("✅ Loan request submitted with ID: %s\nStatus: pending (awaiting Mufundisi approval)\n\nWould you like to do anything else?\n1️⃣ Main Menu\n0️⃣ Exit", loan.ID)
+		response = getTextf(s.Language, "loan_submitted", loan.ID)
 		s.Stage = "post_action"
 
 	// Recommend list: user chooses number
@@ -301,7 +551,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 		loanID, ok := s.TempLoanList[choice]
 		if !ok {
-			response = "❌ Invalid choice. Please reply with a valid number."
+			response = getText(s.Language, "recommend_invalid")
 			respondXML(w, response)
 			return
 		}
@@ -310,13 +560,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		loan, exists := loans[loanID]
 		loanMu.Unlock()
 		if !exists {
-			response = "Loan not found."
+			response = getText(s.Language, "recommend_not_found")
 			respondXML(w, response)
 			return
 		}
 
 		s.Stage = "recommend_action:" + loanID
-		response = fmt.Sprintf("Would you like to recommend %s?\n1️⃣ Yes\n2️⃣ No", loan.ApplicantName)
+		response = getTextf(s.Language, "recommend_question", loan.ApplicantName)
 		respondXML(w, response)
 		return
 
@@ -365,14 +615,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 				loan, exists := loans[loanID]
 				if !exists {
 					loanMu.Unlock()
-					response = "Loan not found."
+					response = getText(s.Language, "recommend_not_found")
 					respondXML(w, response)
 					return
 				}
 				for _, r := range loan.Recommendations {
 					if strings.EqualFold(r, s.Name) {
 						loanMu.Unlock()
-						response = "✅ You already recommended this borrower."
+						response = getText(s.Language, "recommend_already")
 						respondXML(w, response)
 						return
 					}
@@ -381,18 +631,18 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 				computeLoanLimits(loan)
 				loanMu.Unlock()
 
-				response = fmt.Sprintf("✅ Recommendation recorded for %s.", loan.ApplicantName)
+				response = getTextf(s.Language, "recommend_success", loan.ApplicantName)
 				s.Stage = "loan_menu"
 				respondXML(w, response)
 				return
 
 			} else if body == "2" {
 				s.Stage = "recommend_reason:" + loanID
-				response = "Please provide a reason for not recommending:"
+				response = getText(s.Language, "recommend_reason")
 				respondXML(w, response)
 				return
 			} else {
-				response = "Please reply with 1️⃣ Yes or 2️⃣ No."
+				response = getText(s.Language, "recommend_yes_no")
 				respondXML(w, response)
 				return
 			}
@@ -406,7 +656,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			loan, exists := loans[loanID]
 			if !exists {
 				loanMu.Unlock()
-				response = "Loan not found."
+				response = getText(s.Language, "recommend_not_found")
 				respondXML(w, response)
 				return
 			}
@@ -416,7 +666,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			loan.ApprovalReasons[s.Name] = "not recommended: " + reason
 			loanMu.Unlock()
 
-			response = fmt.Sprintf("❌ Not recommended (%s).", reason)
+			response = getTextf(s.Language, "not_recommended", reason)
 			s.Stage = "loan_menu"
 			respondXML(w, response)
 			return
@@ -595,22 +845,61 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 // ------- Helper UI / logic functions -------
 
-func mainMenuText(name string) string {
-	return fmt.Sprintf("Good day, %s 👋\n\nWhat would you like to do today?\n\n1️⃣ Check Balance\n2️⃣ Send Money\n3️⃣ Buy Airtime\n4️⃣ Pay Bills\n5️⃣ View Transactions\n6️⃣ Talk to Support\n7️⃣ Microfin Loan 💸\n\nTip: After entering Loan Menu you can switch roles and regions for demo.", name)
+// getText retrieves translated text for the given language and key
+func getText(language, key string) string {
+	if langMap, ok := translations[language]; ok {
+		if text, ok := langMap[key]; ok {
+			return text
+		}
+	}
+	// Fallback to English if translation not found
+	if langMap, ok := translations["en"]; ok {
+		if text, ok := langMap[key]; ok {
+			return text
+		}
+	}
+	// Last resort: return the key itself
+	return key
 }
 
-func loanMenuText(s *Session) string {
-	menu := fmt.Sprintf("🏦 Microfin Loan Menu — Role: %s | Region: %s\n\n", strings.Title(s.Role), s.Region)
-	menu += "1️⃣ Request Loan\n2️⃣ View Loan Status\n3️⃣ Recommend Borrower\n4️⃣ Switch Role\n5️⃣ Borrow Funds\n"
-	if s.Role == "mufundisi" || s.Role == "elder" {
-		menu += "6️⃣ Approve Loans\n"
-	}
-	menu += "0️⃣ Back to Main Menu\n\n(Use numeric choices)"
+// getTextf retrieves translated text and formats it with the provided arguments
+func getTextf(language, key string, args ...interface{}) string {
+	text := getText(language, key)
+	return fmt.Sprintf(text, args...)
+}
+
+func mainMenuText(s *Session) string {
+	menu := getTextf(s.Language, "good_day", s.Name)
+	menu += "\n\n"
+	menu += getText(s.Language, "menu_1_balance") + "\n"
+	menu += getText(s.Language, "menu_2_send") + "\n"
+	menu += getText(s.Language, "menu_3_airtime") + "\n"
+	menu += getText(s.Language, "menu_4_bills") + "\n"
+	menu += getText(s.Language, "menu_5_transactions") + "\n"
+	menu += getText(s.Language, "menu_6_support") + "\n"
+	menu += getText(s.Language, "menu_7_loan") + "\n"
+	menu += getText(s.Language, "menu_8_language")
+	menu += getText(s.Language, "menu_tip")
 	return menu
 }
 
-func switchRoleMenuText() string {
-	return "Select your role:\n1️⃣ Member / Requester\n2️⃣ Mufundisi (Approver)\n3️⃣ Elder (Approver)\n4️⃣ Back"
+func loanMenuText(s *Session) string {
+	menu := getTextf(s.Language, "loan_menu_title", strings.Title(s.Role), s.Region)
+	menu += getText(s.Language, "loan_menu_1") + "\n"
+	menu += getText(s.Language, "loan_menu_2") + "\n"
+	menu += getText(s.Language, "loan_menu_3") + "\n"
+	menu += getText(s.Language, "loan_menu_4") + "\n"
+	menu += getText(s.Language, "loan_menu_5") + "\n"
+	if s.Role == "mufundisi" || s.Role == "elder" {
+		menu += getText(s.Language, "loan_menu_6") + "\n"
+	}
+	menu += getText(s.Language, "loan_menu_0")
+	menu += getText(s.Language, "loan_menu_note")
+	return menu
+}
+
+func switchRoleMenuText(s *Session) string {
+	return getText(s.Language, "switch_role_menu")
 }
 
 // respondXML encodes TwiML response
@@ -772,19 +1061,19 @@ func recommendListPrompt(s *Session) string {
 	}
 
 	if len(filtered) == 0 {
-		return "✅ No borrowers awaiting recommendation in your region."
+		return getText(s.Language, "recommend_none")
 	}
 
 	// Map numbers to loan IDs for this session
 	s.TempLoanList = make(map[string]string)
-	out := "📋 Borrowers awaiting recommendation:\n\n"
+	out := getText(s.Language, "recommend_title")
 	for i, l := range filtered {
 		index := fmt.Sprintf("%d", i+1)
 		s.TempLoanList[index] = l.ID
 		out += fmt.Sprintf("%s️⃣ %s | Region: %s | Status: %s | Recs: %d\n",
 			index, l.ApplicantName, l.Region, l.Status, len(l.Recommendations))
 	}
-	out += "\nReply with a number (1–" + fmt.Sprint(len(filtered)) + ") or 0️⃣ to go back."
+	out += getTextf(s.Language, "recommend_footer", len(filtered))
 	return out
 }
 
